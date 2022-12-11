@@ -22,8 +22,6 @@ type Writer interface {
 }
 
 func (s *Syslogger) Run() {
-	//ProcessorChannel := make(chan format.LogParts)
-	//WriterChannel := make(chan format.LogParts)
 	s.Server.SetHandler(s.Handler)
 	if err := s.Server.ListenUDP("0.0.0.0:514"); err != nil {
 		log.Fatalln(err)
@@ -54,7 +52,7 @@ func New(processors []Processor, writers []Writer) Syslogger {
 	handler := syslog.NewChannelHandler(channel)
 	server := syslog.NewServer()
 	server.SetFormat(syslog.RFC3164)
-	server.SetSocketSize(1048576)
+	server.SetSocketSize(2568576)
 
 	return Syslogger{
 		Server:     server,

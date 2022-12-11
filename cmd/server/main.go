@@ -16,6 +16,7 @@ var re = regexp.MustCompile(`(?m)\d+`)
 var founded = make(map[int]struct{})
 var M sync.RWMutex
 var T = time.Now()
+var C = 0
 
 func (t *TestProcessor) Process(parts format.LogParts) format.LogParts {
 	for k, v := range parts {
@@ -30,9 +31,10 @@ func (t *TestProcessor) Process(parts format.LogParts) format.LogParts {
 				}
 				M.Lock()
 				founded[num] = struct{}{}
+				C += 1
 				M.Unlock()
 				if num == 50000 {
-					fmt.Println("Finished Processing: ", time.Since(T).String())
+					fmt.Printf("Finished Processing %v messages in %v\n", C, time.Since(T).String())
 				}
 			}
 		}
@@ -58,6 +60,9 @@ func main() {
 				}
 				M.RUnlock()
 
+			}
+			if C != 50000 {
+				fmt.Println("Incorrect number of messages")
 			}
 		}
 	}()
