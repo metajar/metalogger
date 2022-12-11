@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/metajar/metalogger/internal/healthchecks"
 	"github.com/metajar/metalogger/internal/metalogger"
 	"github.com/metajar/metalogger/internal/metrics/prometheus"
@@ -62,7 +61,6 @@ func main() {
 		metalogger.WithFormat(&format.RFC3164{}),
 		metalogger.WithPrometehusMetrics(8888),
 	)
-	spew.Dump(s)
 	t := time.NewTimer(time.Second * 10)
 	go func() {
 		for range t.C {
