@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/metajar/metalogger/internal/healthchecks"
+	"github.com/metajar/metalogger/internal/healthchecks/gobgp"
 	"github.com/metajar/metalogger/internal/metalogger"
 	"github.com/metajar/metalogger/internal/metrics/prometheus"
 	"github.com/metajar/metalogger/internal/syslogger/format"
@@ -51,11 +52,13 @@ func (t *TestWriter) Write(parts format.LogParts) {
 }
 
 func main() {
+	bgpHealth := gobgp.New()
+
 	s := metalogger.NewMetalogger(
 		metalogger.WithProcessors([]metalogger.Processor{&TestProcessor{}}),
 		metalogger.WithWriters([]metalogger.Writer{&TestWriter{}}),
 		metalogger.WithAddress("0.0.0.0:514"),
-		metalogger.WithHealthChecks([]metalogger.HealthCheck{healthchecks.Self{}}),
+		metalogger.WithHealthChecks([]metalogger.HealthCheck{healthchecks.Self{}, &bgpHealth}),
 		metalogger.WithHealthCheckCadence(5*time.Second),
 		metalogger.WithSocketSize(2560000),
 		metalogger.WithFormat(&format.RFC3164{}),

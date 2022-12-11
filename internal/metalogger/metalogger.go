@@ -31,12 +31,17 @@ type Writer interface {
 }
 
 type HealthCheck interface {
+	Init()
 	Check() bool
 	Success()
 	Failure()
 }
 
 func (s *MetaLogger) HealthCheckRoutine() {
+	// Lets Init all of our Healthchecks as some may need to be setup for further usage.
+	for _, h := range s.HealthChecks {
+		h.Init()
+	}
 	t := time.NewTicker(s.healthCheckCadence)
 	for range t.C {
 		for _, h := range s.HealthChecks {
