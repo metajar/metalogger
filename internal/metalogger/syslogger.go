@@ -31,18 +31,22 @@ func (s *Syslogger) Run() {
 	if err := s.Server.Boot(); err != nil {
 		log.Fatalln(err)
 	}
-	for i := 0; i < 1000; i++ {
-		go func(channel syslog.LogPartsChannel) {
-			for logParts := range channel {
+
+	go func(channel syslog.LogPartsChannel) {
+		for logParts := range channel {
+			logParts := logParts
+			go func() {
 				for _, p := range s.Processors {
 					logParts = p.Process(logParts)
 				}
 				for _, w := range s.Writers {
 					w.Write(logParts)
 				}
-			}
-		}(s.Channel)
-	}
+			}()
+
+		}
+	}(s.Channel)
+
 	s.Server.Wait()
 }
 func New(processors []Processor, writers []Writer) Syslogger {

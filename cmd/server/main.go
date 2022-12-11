@@ -14,7 +14,7 @@ type TestProcessor struct{}
 
 var re = regexp.MustCompile(`(?m)\d+`)
 var founded = make(map[int]struct{})
-var M sync.Mutex
+var M sync.RWMutex
 var T = time.Now()
 
 func (t *TestProcessor) Process(parts format.LogParts) format.LogParts {
@@ -47,14 +47,16 @@ func (t *TestWriter) Write(parts format.LogParts) {
 
 func main() {
 	s := metalogger.New([]metalogger.Processor{&TestProcessor{}}, []metalogger.Writer{&TestWriter{}})
-	t := time.NewTimer(time.Second * 60)
+	t := time.NewTimer(time.Second * 10)
 	go func() {
 		for range t.C {
 			fmt.Println("Checking for missing messages")
 			for i := 0; i < 50000; i++ {
+				M.RLock()
 				if _, ok := founded[i+1]; !ok {
 					fmt.Println("Missing message:", i)
 				}
+				M.RUnlock()
 
 			}
 		}
