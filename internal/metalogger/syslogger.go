@@ -1,8 +1,8 @@
 package metalogger
 
 import (
-	"gopkg.in/mcuadros/go-syslog.v2"
-	"gopkg.in/mcuadros/go-syslog.v2/format"
+	"github.com/metajar/metalogger/internal/syslogger"
+	"github.com/metajar/metalogger/internal/syslogger/format"
 	"log"
 )
 
@@ -22,6 +22,8 @@ type Writer interface {
 }
 
 func (s *Syslogger) Run() {
+	//ProcessorChannel := make(chan format.LogParts)
+	//WriterChannel := make(chan format.LogParts)
 	s.Server.SetHandler(s.Handler)
 	if err := s.Server.ListenUDP("0.0.0.0:514"); err != nil {
 		log.Fatalln(err)
@@ -29,7 +31,7 @@ func (s *Syslogger) Run() {
 	if err := s.Server.Boot(); err != nil {
 		log.Fatalln(err)
 	}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1000; i++ {
 		go func(channel syslog.LogPartsChannel) {
 			for logParts := range channel {
 				for _, p := range s.Processors {
@@ -44,10 +46,11 @@ func (s *Syslogger) Run() {
 	s.Server.Wait()
 }
 func New(processors []Processor, writers []Writer) Syslogger {
-	channel := make(syslog.LogPartsChannel)
+	channel := make(syslog.LogPartsChannel, 10000000)
 	handler := syslog.NewChannelHandler(channel)
 	server := syslog.NewServer()
 	server.SetFormat(syslog.RFC3164)
+	server.SetSocketSize(1048576)
 
 	return Syslogger{
 		Server:     server,
