@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/metajar/metalogger/internal/healthchecks"
 	"github.com/metajar/metalogger/internal/metalogger"
 	"github.com/metajar/metalogger/internal/syslogger/format"
 	"regexp"
@@ -48,7 +50,18 @@ func (t *TestWriter) Write(parts format.LogParts) {
 }
 
 func main() {
-	s := metalogger.New([]metalogger.Processor{&TestProcessor{}}, []metalogger.Writer{&TestWriter{}})
+	//s := metalogger.New([]metalogger.Processor{&TestProcessor{}}, []metalogger.Writer{&TestWriter{}})
+	s := metalogger.NewMetalogger(
+		metalogger.WithProcessors([]metalogger.Processor{&TestProcessor{}}),
+		metalogger.WithWriters([]metalogger.Writer{&TestWriter{}}),
+		metalogger.WithAddress("0.0.0.0:514"),
+		metalogger.WithHealthChecks([]metalogger.HealthCheck{healthchecks.Self{}}),
+		metalogger.WithHealthCheckCadence(5*time.Second),
+		metalogger.WithSocketSize(2560000),
+		metalogger.WithFormat(&format.RFC3164{}),
+	)
+
+	spew.Dump(s)
 	t := time.NewTimer(time.Second * 10)
 	go func() {
 		for range t.C {
