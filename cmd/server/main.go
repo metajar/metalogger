@@ -5,6 +5,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/metajar/metalogger/internal/healthchecks"
 	"github.com/metajar/metalogger/internal/metalogger"
+	"github.com/metajar/metalogger/internal/metrics/prometheus"
 	"github.com/metajar/metalogger/internal/syslogger/format"
 	"regexp"
 	"strconv"
@@ -33,6 +34,7 @@ func (t *TestProcessor) Process(parts format.LogParts) format.LogParts {
 				}
 				M.Lock()
 				founded[num] = struct{}{}
+				prometheus.MessagesRecieved.Inc()
 				C += 1
 				M.Unlock()
 				if num == 50000 {
@@ -50,7 +52,6 @@ func (t *TestWriter) Write(parts format.LogParts) {
 }
 
 func main() {
-	//s := metalogger.New([]metalogger.Processor{&TestProcessor{}}, []metalogger.Writer{&TestWriter{}})
 	s := metalogger.NewMetalogger(
 		metalogger.WithProcessors([]metalogger.Processor{&TestProcessor{}}),
 		metalogger.WithWriters([]metalogger.Writer{&TestWriter{}}),
@@ -59,8 +60,8 @@ func main() {
 		metalogger.WithHealthCheckCadence(5*time.Second),
 		metalogger.WithSocketSize(2560000),
 		metalogger.WithFormat(&format.RFC3164{}),
+		metalogger.WithPrometehusMetrics(8888),
 	)
-
 	spew.Dump(s)
 	t := time.NewTimer(time.Second * 10)
 	go func() {

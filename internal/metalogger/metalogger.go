@@ -2,14 +2,15 @@ package metalogger
 
 import (
 	"github.com/metajar/metalogger/internal/logger"
+	"github.com/metajar/metalogger/internal/metrics/prometheus"
 	"github.com/metajar/metalogger/internal/syslogger"
 	"github.com/metajar/metalogger/internal/syslogger/format"
 	"time"
 )
 
-// Syslogger is simply the main application that handles
+// MetaLogger is simply the main application that handles
 // all the coordination in the system.
-type Syslogger struct {
+type MetaLogger struct {
 	Server             *syslog.Server
 	Handler            *syslog.ChannelHandler
 	Channel            chan format.LogParts
@@ -35,7 +36,7 @@ type HealthCheck interface {
 	Failure()
 }
 
-func (s *Syslogger) HealthCheckRoutine() {
+func (s *MetaLogger) HealthCheckRoutine() {
 	t := time.NewTicker(s.healthCheckCadence)
 	for range t.C {
 		for _, h := range s.HealthChecks {
@@ -48,13 +49,13 @@ func (s *Syslogger) HealthCheckRoutine() {
 	}
 }
 
-func (s *Syslogger) Run() {
-
+// Run will take
+func (s *MetaLogger) Run() {
 	s.Server.SetHandler(s.Handler)
-	if err := s.Server.ListenUDP("0.0.0.0:514"); err != nil {
+	if err := s.Server.ListenUDP(s.address); err != nil {
 		logger.SugarLogger.Fatalln(err)
 	}
-	logger.SugarLogger.Infow("metalogger started up", "port", "514")
+	logger.SugarLogger.Infow("metalogger started up", "address", s.address)
 	if err := s.Server.Boot(); err != nil {
 		logger.SugarLogger.Fatalln(err)
 	}
@@ -62,6 +63,8 @@ func (s *Syslogger) Run() {
 	go func(channel syslog.LogPartsChannel) {
 		for logParts := range channel {
 			logParts := logParts
+			// Takes each message off the channel and throws it into its own goroutine.
+			// This helps speed up the processing vs channel etc.
 			go func() {
 				for _, p := range s.Processors {
 					logParts = p.Process(logParts)
@@ -70,85 +73,79 @@ func (s *Syslogger) Run() {
 					w.Write(logParts)
 				}
 			}()
-
 		}
 	}(s.Channel)
-
 	s.Server.Wait()
 }
-func New(processors []Processor, writers []Writer) Syslogger {
-	channel := make(syslog.LogPartsChannel, 10000000)
-	handler := syslog.NewChannelHandler(channel)
-	server := syslog.NewServer()
-	server.SetFormat(syslog.RFC3164)
-	server.SetSocketSize(2568576)
 
-	return Syslogger{
-		healthCheckCadence: time.Second * 30,
-		Server:             server,
-		Handler:            handler,
-		Channel:            channel,
-		Processors:         processors,
-		writers:            writers,
-	}
+type Option func(*MetaLogger)
 
-}
-
-type SysloggerOption func(*Syslogger)
-
-func WithSocketSize(i int) SysloggerOption {
-	return func(s *Syslogger) {
+func WithSocketSize(i int) Option {
+	return func(s *MetaLogger) {
 		s.socketSize = i
 	}
 }
 
-func WithAddress(a string) SysloggerOption {
-	return func(s *Syslogger) {
+func WithAddress(a string) Option {
+	return func(s *MetaLogger) {
 		s.address = a
 	}
 }
 
-func WithHealthCheckCadence(t time.Duration) SysloggerOption {
-	return func(s *Syslogger) {
+func WithHealthCheckCadence(t time.Duration) Option {
+	return func(s *MetaLogger) {
 		s.healthCheckCadence = t
 	}
 }
 
-func WithProcessors(f []Processor) SysloggerOption {
-	return func(s *Syslogger) {
+func WithProcessors(f []Processor) Option {
+	return func(s *MetaLogger) {
 		s.Processors = f
 	}
 }
 
-func WithHealthChecks(f []HealthCheck) SysloggerOption {
-	return func(s *Syslogger) {
+func WithHealthChecks(f []HealthCheck) Option {
+	return func(s *MetaLogger) {
 		s.HealthChecks = f
 	}
 }
-func WithWriters(f []Writer) SysloggerOption {
-	return func(s *Syslogger) {
+func WithWriters(f []Writer) Option {
+	return func(s *MetaLogger) {
 		s.writers = f
 	}
 }
-func WithFormat(f format.Format) SysloggerOption {
-	return func(s *Syslogger) {
+func WithFormat(f format.Format) Option {
+	return func(s *MetaLogger) {
 		s.format = f
 	}
 }
 
-func NewMetalogger(opts ...SysloggerOption) *Syslogger {
-	syslogger := &Syslogger{}
+func WithPrometehusMetrics(port int) Option {
+	return func(s *MetaLogger) {
+		prometheus.PromServer(port)
+	}
+}
+
+// NewMetalogger will construct the new syslogger/metalogger that will be used
+func NewMetalogger(opts ...Option) *MetaLogger {
+	mlogger := &MetaLogger{}
 	for _, opt := range opts {
-		opt(syslogger)
+		opt(mlogger)
 	}
 	channel := make(syslog.LogPartsChannel, 10000000)
 	handler := syslog.NewChannelHandler(channel)
 	server := syslog.NewServer()
-	server.SetFormat(syslogger.format)
-	server.SetSocketSize(syslogger.socketSize)
-	syslogger.Server = server
-	syslogger.Handler = handler
-	syslogger.Channel = channel
+	if mlogger.format == nil {
+		logger.SugarLogger.Fatalln("a formatter will need to be set")
+	}
+	server.SetFormat(mlogger.format)
+	server.SetSocketSize(mlogger.socketSize)
+	mlogger.Server = server
+	mlogger.Handler = handler
+	mlogger.Channel = channel
+	if mlogger.healthCheckCadence.Seconds() == 0 {
+		mlogger.healthCheckCadence = time.Minute * 5
+	}
 
-	return syslogger
+	return mlogger
 }
