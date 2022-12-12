@@ -13,6 +13,14 @@ import (
 	apb "google.golang.org/protobuf/types/known/anypb"
 )
 
+func New(opts ...Option) *BgpAnycast {
+	bgpAny := &BgpAnycast{}
+	for _, opt := range opts {
+		opt(bgpAny)
+	}
+	return bgpAny
+}
+
 type BgpAnycast struct {
 	client          apipb.GobgpApiClient
 	routerId        string
@@ -20,6 +28,46 @@ type BgpAnycast struct {
 	neighborAddress string
 	neighborASN     uint32
 	anyCastPrefix   *apipb.IPAddressPrefix
+	bgpMultihop     bool
+	ttlHops         uint32
+}
+
+type Option func(anycast *BgpAnycast)
+
+func RouterID(addr string) Option {
+	return func(b *BgpAnycast) {
+		b.routerId = addr
+	}
+}
+
+func RouterASN(asn uint32) Option {
+	return func(b *BgpAnycast) {
+		b.routerASN = asn
+	}
+}
+
+func NeighborAddress(addr string) Option {
+	return func(b *BgpAnycast) {
+		b.neighborAddress = addr
+	}
+}
+
+func NeighborASN(asn uint32) Option {
+	return func(b *BgpAnycast) {
+		b.neighborASN = asn
+	}
+}
+func AnnouncePrefix(prefix *apipb.IPAddressPrefix) Option {
+	return func(b *BgpAnycast) {
+		b.anyCastPrefix = prefix
+	}
+}
+
+func WithEbgpMulti(hops uint32) Option {
+	return func(b *BgpAnycast) {
+		b.bgpMultihop = true
+		b.ttlHops = hops
+	}
 }
 
 func (b *BgpAnycast) Init() {
@@ -53,6 +101,17 @@ func (b *BgpAnycast) Init() {
 			PeerAsn:         b.neighborASN,
 		},
 	}
+	if b.bgpMultihop {
+		if b.ttlHops == 0 {
+			logger.SugarLogger.Infow("ttlHops not set setting to default", "default", 10)
+			b.ttlHops = 10
+		}
+		n.EbgpMultihop = &apipb.EbgpMultihop{
+			Enabled:     true,
+			MultihopTtl: b.ttlHops,
+		}
+	}
+
 	// add the peer to the bgp speaker
 	if err := s.AddPeer(context.Background(), &api.AddPeerRequest{
 		Peer: n,
@@ -71,6 +130,7 @@ func (b *BgpAnycast) Check() bool {
 }
 
 func (b *BgpAnycast) Success() {
+	fmt.Println("Sending BGP Updates!")
 	nlri, _ := apb.New(b.anyCastPrefix)
 	family := &apipb.Family{
 		Afi:  apipb.Family_AFI_IP,
@@ -83,7 +143,7 @@ func (b *BgpAnycast) Success() {
 		NextHop: "172.31.255.199",
 	})
 	attrs := []*apb.Any{a1, a2}
-	resp, err := b.client.AddPath(context.Background(), &apipb.AddPathRequest{
+	_, err := b.client.AddPath(context.Background(), &apipb.AddPathRequest{
 		TableType: apipb.TableType_GLOBAL,
 		Path: &apipb.Path{
 			Family: family,
@@ -94,15 +154,10 @@ func (b *BgpAnycast) Success() {
 	if err != nil {
 		logger.SugarLogger.Fatalln(err)
 	}
-	logger.SugarLogger.Infow(resp.String())
 }
 
 func (b *BgpAnycast) Failure() {
 	fmt.Println("Failure on check. We should probably withdraw later if this is more important")
-}
-
-func New() BgpAnycast {
-	return BgpAnycast{}
 }
 
 // implement github.com/osrg/gobgp/v3/pkg/log/Logger interface

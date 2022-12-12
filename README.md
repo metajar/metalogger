@@ -8,6 +8,23 @@ This allows for a quick and simple way to add a syslog server in any network.
 
 ## Processors
 
+Example LogParts:
+
+```
+(format.LogParts) (len=10) {
+ (string) (len=7) "content": (string) (len=29) "Test UDP syslog message 50000",
+ (string) (len=8) "priority": (int) 14,
+ (string) (len=14) "somethingExtra": (string) (len=26) "wow this is something else",
+ (string) (len=8) "hostname": (string) "",
+ (string) (len=3) "tag": (string) "",
+ (string) (len=8) "severity": (int) 6,
+ (string) (len=6) "client": (string) (len=20) "172.31.255.119:47690",
+ (string) (len=8) "tls_peer": (string) "",
+ (string) (len=9) "timestamp": (time.Time) 2022-12-12 00:19:57 +0000 UTC,
+ (string) (len=8) "facility": (int) 1
+}
+```
+
 Processors will simply take in the syslog message and perform processing on it. This can be anything
 from reverse DNS lookup, to device lookup, interface matching and whatver your use case may be. Adding
 Processors to the metalogger must satisfy the processor interface:
