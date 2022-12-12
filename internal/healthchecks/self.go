@@ -9,6 +9,8 @@ import (
 // This is the most boring thing that we can possibly do.
 type Self struct{}
 
+func (s Self) Init() {}
+
 func (s Self) Check() bool {
 	return true
 }
