@@ -67,6 +67,17 @@ func (f *CiscoXR) Parse() error {
 	return nil
 }
 
+func (f *CiscoXR) Evaluate(line string) (bool, error) {
+	m, err := GrokParser.Parse("%{SYSLOG}", string(f.buff))
+	if err != nil {
+		return false, err
+	}
+	if len(m) > 8 {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (f *CiscoXR) Dump() syslogparser.LogParts {
 	bs, err := json.Marshal(f.parsed)
 	if err != nil {
@@ -81,7 +92,6 @@ func (f *CiscoXR) Dump() syslogparser.LogParts {
 }
 
 func (f *CiscoXR) Location(location *time.Location) {
-
 }
 
 func NewParser(line []byte) syslogparser.LogParser {
@@ -90,8 +100,4 @@ func NewParser(line []byte) syslogparser.LogParser {
 
 func (f *CiscoXR) GetParser(line []byte) LogParser {
 	return &parserWrapper{NewParser(line)}
-}
-
-func (f *RFC3164) CiscoXR() bufio.SplitFunc {
-	return nil
 }

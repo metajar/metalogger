@@ -3,6 +3,7 @@ package format
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"strconv"
 
 	"github.com/metajar/metalogger/internal/syslogger/syslogparser/rfc3164"
@@ -34,7 +35,7 @@ const (
  * Will always fallback to rfc3164 (see section 4.3.3)
  */
 func detect(data []byte) int {
-	// all formats have a sapce somewhere
+	// all formats have a space somewhere
 	if i := bytes.IndexByte(data, ' '); i > 0 {
 		pLength := data[0:i]
 		if _, err := strconv.Atoi(string(pLength)); err == nil {
@@ -63,6 +64,8 @@ func detect(data []byte) int {
 }
 
 func (f *Automatic) GetParser(line []byte) LogParser {
+	fmt.Printf("\n\n\n\n%v\n\n\n\n", string(line))
+
 	switch format := detect(line); format {
 	case detectedRFC3164:
 		return &parserWrapper{rfc3164.NewParser(line)}

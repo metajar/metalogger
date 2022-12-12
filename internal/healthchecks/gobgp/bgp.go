@@ -130,7 +130,7 @@ func (b *BgpAnycast) Check() bool {
 }
 
 func (b *BgpAnycast) Success() {
-	fmt.Println("Sending BGP Updates!")
+	logger.SugarLogger.Infow("Sending BGP Updates", "prefix", b.anyCastPrefix.GetPrefix())
 	nlri, _ := apb.New(b.anyCastPrefix)
 	family := &apipb.Family{
 		Afi:  apipb.Family_AFI_IP,

@@ -3,6 +3,7 @@ package format
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"strconv"
 
 	"github.com/metajar/metalogger/internal/syslogger/syslogparser/rfc5424"
@@ -11,6 +12,7 @@ import (
 type RFC6587 struct{}
 
 func (f *RFC6587) GetParser(line []byte) LogParser {
+	fmt.Printf("\n\n\n\n%v\n\n\n\n", string(line))
 	return &parserWrapper{rfc5424.NewParser(line)}
 }
 

@@ -56,7 +56,7 @@ func main() {
 		metalogger.WithHealthChecks([]metalogger.HealthCheck{healthchecks.Self{}, bgpHealth}),
 		metalogger.WithHealthCheckCadence(10*time.Second),
 		metalogger.WithSocketSize(2560000),
-		metalogger.WithFormat(&format.CiscoXR{}),
+		metalogger.WithFormat(&format.Automatic{}),
 		metalogger.WithPrometehusMetrics(8888),
 	)
 	s.Run()
