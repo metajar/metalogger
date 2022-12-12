@@ -4,7 +4,9 @@ Summary:
 
 Metalogger is a simple and fast syslog server that can be used within a network to write to multiple destinations and
 run a large set of processors on
-This allows for a quick and simple way to add a syslog server in any network.
+This allows for a quick and simple way to add a syslog server in any network. Often times device may 
+not adhere to the proper standards of messages. Metalogger also allows the usage of custom formats by utilizing
+grok. An example of this can be seen with the CiscoXR format. 
 
 ## Processors
 

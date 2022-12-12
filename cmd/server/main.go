@@ -15,7 +15,6 @@ import (
 type TestProcessor struct{}
 
 func (t *TestProcessor) Process(parts format.LogParts) format.LogParts {
-	spew.Dump(parts)
 	for k, v := range parts {
 		if k == "hostname" {
 			parts["somethingExtra"] = fmt.Sprintf("this is something that would be processed for %v", v)
@@ -55,9 +54,9 @@ func main() {
 		metalogger.WithWriters([]metalogger.Writer{&TestWriter{}}),
 		metalogger.WithAddress("0.0.0.0:514"),
 		metalogger.WithHealthChecks([]metalogger.HealthCheck{healthchecks.Self{}, bgpHealth}),
-		metalogger.WithHealthCheckCadence(300*time.Second),
+		metalogger.WithHealthCheckCadence(10*time.Second),
 		metalogger.WithSocketSize(2560000),
-		metalogger.WithFormat(&format.RFC3164{}),
+		metalogger.WithFormat(&format.CiscoXR{}),
 		metalogger.WithPrometehusMetrics(8888),
 	)
 	s.Run()
